@@ -6,4 +6,4 @@
   #{:internal
     :external})
 
-(models/defmodel Dimensions :metabase_dimensions)
+(models/defmodel Dimensions :dimensions)
