@@ -2,6 +2,7 @@
   (:require [toucan.models :as models]))
 
 (def dimention-types
+  "Possible values for `Dimensions.type`"
   #{:internal
     :external})
 

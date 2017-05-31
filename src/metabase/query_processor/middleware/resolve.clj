@@ -109,10 +109,9 @@
   (apply merge-with #(or %2 %1) maps))
 
 (defn- field-ph-resolve-field [{:keys [field-id datetime-unit], :as this} field-id->field]
-  (if-let [{:keys [base-type special-type], :as field} (do
-                                                         (some-> (field-id->field field-id)
-                                                                 i/map->Field
-                                                                 (merge-non-nils (select-keys this [:fk-field-id :remapped-from :remapped-to :field-display-name]))))]
+  (if-let [{:keys [base-type special-type], :as field} (some-> (field-id->field field-id)
+                                                               i/map->Field
+                                                               (merge-non-nils (select-keys this [:fk-field-id :remapped-from :remapped-to :field-display-name])))]
     ;; try to resolve the Field with the ones available in field-id->field
     (let [datetime-field? (or (isa? base-type :type/DateTime)
                               (isa? special-type :type/DateTime))]
@@ -203,9 +202,9 @@
         ;; If there are no more Field IDs to resolve we're done.
         expanded-query-dict
         ;; Otherwise fetch + resolve the Fields in question
-        (let [fields (->> (u/key-by :id (-> (db/select [field/Field :name :display_name :base_type :special_type :visibility_type :table_id :parent_id :description :id]
-                                              :visibility_type [:not= "sensitive"]
-                                              :id [:in field-ids])))
+        (let [fields (->> (u/key-by :id (db/select [field/Field :name :display_name :base_type :special_type :visibility_type :table_id :parent_id :description :id]
+                                          :visibility_type [:not= "sensitive"]
+                                          :id [:in field-ids]))
                           (m/map-vals rename-mb-field-keys)
                           (m/map-vals #(assoc % :parent (when-let [parent-id (:parent-id %)]
                                                           (i/map->FieldPlaceholder {:field-id parent-id})))))]

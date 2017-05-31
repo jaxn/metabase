@@ -7,6 +7,8 @@
             [toucan.db :as db]
             [metabase.query-processor.middleware.expand :as ql]))
 
+(tu/resolve-private-vars metabase.query-processor.middleware.add-dimension-projections remap-results add-fk-remaps)
+
 (def col-defaults
   {:description nil
      :source :fields,
