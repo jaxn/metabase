@@ -76,6 +76,23 @@
         (sync-database/sync-table! updated-table))
       updated-table)))
 
+(defn- values->maybe-pairs
+  "Converts a seq of `VALUES` and `HUMAN-READABLE-VALUES` to a seq of
+  lists of size 1 (if `HUMAN-READABLE-VALUES` is empty) or pairs"
+  [values human-readable-values]
+  (if (seq human-readable-values)
+    (map vector values human-readable-values)
+    (map vector values)))
+
+(defn- values->response
+  "Replaces values in `FIELD` with a seq of pairs"
+  [{{:keys [values human_readable_values]} :values, :as field}]
+  (if (seq values)
+    (assoc field :values (values->maybe-pairs values human_readable_values))
+    field))
+
+(defn- format-fields-for-response [resp]
+  (update resp :fields #(map values->response %)))
 
 (api/defendpoint GET "/:id/query_metadata"
   "Get metadata about a `Table` useful for running queries.
@@ -86,7 +103,8 @@
   [id include_sensitive_fields]
   {include_sensitive_fields (s/maybe su/BooleanString)}
   (-> (api/read-check Table id)
-      (hydrate :db [:fields :target] :field_values :segments :metrics)
+      (hydrate :db [:fields :target :normal_values :dimensions] :segments :metrics)
+      format-fields-for-response
       (update-in [:fields] (if (Boolean/parseBoolean include_sensitive_fields)
                              ;; If someone passes include_sensitive_fields return hydrated :fields as-is
                              identity
