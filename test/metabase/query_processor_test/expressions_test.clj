@@ -119,10 +119,10 @@
   (format-rows-by [int str int (partial u/round-to-decimals 4) (partial u/round-to-decimals 4) int str]
     (rows+column-names
       (data/run-query venues
-        (ql/expressions {:remapped-val (ql/remap-expression $category_id {"4" "Foo"
-                                                                          "11" "Bar"
-                                                                          "29" "Baz"
-                                                                          "20" "Qux"})})
+        (ql/expressions {:remapped-val (ql/remap-expression $category_id {4 "Foo"
+                                                                          11 "Bar"
+                                                                          29 "Baz"
+                                                                          20 "Qux"})})
         (ql/limit 5)
         (ql/order-by (ql/asc $id))))))
 
