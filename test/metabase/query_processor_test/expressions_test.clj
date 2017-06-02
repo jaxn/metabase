@@ -96,47 +96,13 @@
             (ql/breakout (ql/expression :x))))))
 
 (datasets/expect-with-engines (engines-that-support :expressions)
-  {:columns ["ID" "NAME" "CATEGORY_ID" "LATITUDE" "LONGITUDE" "PRICE" "name-with-quotes"]
-   :rows [[1 "Red Medicine"                 4  10.0646 -165.374 3 "[Red Medicine]"]
-          [2 "Stout Burgers & Beers"        11 34.0996 -118.329 2 "[Stout Burgers & Beers]"]
-          [3 "The Apple Pan"                11 34.0406 -118.428 2 "[The Apple Pan]"]
-          [4 "Wurstküche"                   29 33.9997 -118.465 2 "[Wurstküche]"]
-          [5 "Brite Spot Family Restaurant" 20 34.0778 -118.261 2 "[Brite Spot Family Restaurant]"]]}
+  [[1 "Red Medicine"                 4  10.0646 -165.374 3 "[Red Medicine]"]
+   [2 "Stout Burgers & Beers"        11 34.0996 -118.329 2 "[Stout Burgers & Beers]"]
+   [3 "The Apple Pan"                11 34.0406 -118.428 2 "[The Apple Pan]"]
+   [4 "Wurstküche"                   29 33.9997 -118.465 2 "[Wurstküche]"]
+   [5 "Brite Spot Family Restaurant" 20 34.0778 -118.261 2 "[Brite Spot Family Restaurant]"]]
   (format-rows-by [int str int (partial u/round-to-decimals 4) (partial u/round-to-decimals 4) int str]
-    (rows+column-names
-      (data/run-query venues
-        (ql/expressions {:name-with-quotes (ql/sql-expression "'[' || name || ']'")})
-        (ql/limit 5)
-        (ql/order-by (ql/asc $id))))))
-
-(datasets/expect-with-engines (engines-that-support :expressions)
-  {:columns ["ID" "NAME" "CATEGORY_ID" "LATITUDE" "LONGITUDE" "PRICE" "remapped-val"]
-   :rows [[1 "Red Medicine"                 4  10.0646 -165.374 3 "Foo"]
-          [2 "Stout Burgers & Beers"        11 34.0996 -118.329 2 "Bar"]
-          [3 "The Apple Pan"                11 34.0406 -118.428 2 "Bar"]
-          [4 "Wurstküche"                   29 33.9997 -118.465 2 "Baz"]
-          [5 "Brite Spot Family Restaurant" 20 34.0778 -118.261 2 "Qux"]]}
-  (format-rows-by [int str int (partial u/round-to-decimals 4) (partial u/round-to-decimals 4) int str]
-    (rows+column-names
-      (data/run-query venues
-        (ql/expressions {:remapped-val (ql/remap-expression $category_id {4 "Foo"
-                                                                          11 "Bar"
-                                                                          29 "Baz"
-                                                                          20 "Qux"})})
-        (ql/limit 5)
-        (ql/order-by (ql/asc $id))))))
-
-(datasets/expect-with-engines (engines-that-support :expressions)
-  {:columns ["ID" "DATE" "USER_ID" "VENUE_ID" "remap-1" "remap-2"]
-   :rows [[1 "2014-04-07T00:00:00.000Z" 5 12 "The Misfit Restaurant + Bar" "Quentin Sören"]
-          [2 "2014-09-18T00:00:00.000Z" 1 31 "Bludso's BBQ" "Plato Yeshua"]
-          [3 "2014-09-15T00:00:00.000Z" 8 56 "Philippe the Original" "Szymon Theutrich"]
-          [4 "2014-03-11T00:00:00.000Z" 5 4 "Wurstküche" "Quentin Sören"]
-          [5 "2013-05-05T00:00:00.000Z" 3 49 "Hotel Biron" "Kaneonuskatew Eiran"]]}
-  (format-rows-by [int str int int str str]
-    (rows+column-names
-      (data/run-query checkins
-        (ql/expressions {:remap-1 (ql/fk-remap-expression $venue_id $venue_id->venues.id $venue_id->venues.name)
-                         :remap-2 (ql/fk-remap-expression $user_id $user_id->users.id $user_id->users.name)})
-        (ql/limit 5)
-        (ql/order-by (ql/asc $id))))))
+    (rows (data/run-query venues
+            (ql/expressions {:name-with-quotes (ql/sql-expression "'[' || name || ']'")})
+            (ql/limit 5)
+            (ql/order-by (ql/asc $id))))))

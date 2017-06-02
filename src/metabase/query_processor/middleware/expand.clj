@@ -415,24 +415,6 @@
   [sql-expr :- su/NonBlankString]
   (i/map->SQLExpression {:expr sql-expr}))
 
-(s/defn ^:ql remap-expression
-  "Expression that projects out alternate representations of values in
-  `COLUMN`. `COLUMN` values are the keys in `MAPPING`, with the value
-  found in `MAPPING` as the result of the expression."
-  [column :- i/FieldPlaceholderOrExpressionRef
-   mapping :- {s/Int s/Str}]
-  (i/map->RemapExpression {:column column :mapping mapping}))
-
-(s/defn ^:ql fk-remap-expression
-  "Expression that uses `COLUMN` and `FOREIGN-COLUMN` to project out a
-  more user friendly value found in `REMAPPING-COLUMN`."
-  [column :- i/FieldPlaceholderOrExpressionRef
-   foreign-column :- i/FieldPlaceholderOrExpressionRef
-   remapping-column :- i/FieldPlaceholderOrExpressionRef]
-  (i/map->FKRemapExpression {:column column
-                             :foreign-column foreign-column
-                             :remapping-column remapping-column}))
-
 ;;; Metric & Segment handlers
 
 ;; These *do not* expand the normal Metric and Segment macros used in normal queries; that's handled in `metabase.query-processor.macros` before

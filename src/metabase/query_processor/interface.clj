@@ -210,16 +210,9 @@
 
 (s/defrecord SQLExpression [expr :- su/NonBlankString])
 
-(s/defrecord RemapExpression [column :- FieldPlaceholderOrExpressionRef
-                              mapping :- {s/Int s/Str}])
-
-(s/defrecord FKRemapExpression [column :- FieldPlaceholderOrExpressionRef
-                                foreign-column :- FieldPlaceholderOrExpressionRef
-                                remapping-column :- FieldPlaceholderOrExpressionRef])
-
 (def AnyExpression
   "Schema for all expressions allowed in MBQL"
-  (s/named (s/cond-pre ArithmeticExpression SQLExpression RemapExpression FKRemapExpression)
+  (s/named (s/cond-pre ArithmeticExpression SQLExpression)
            "Valid expression."))
 
 (def AnyFieldOrExpression

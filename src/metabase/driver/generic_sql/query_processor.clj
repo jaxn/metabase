@@ -17,7 +17,7 @@
             [metabase.util.honeysql-extensions :as hx])
   (:import clojure.lang.Keyword
            java.sql.SQLException
-           [metabase.query_processor.interface AgFieldRef ArithmeticExpression DateTimeField DateTimeValue ExpressionRef Field RelativeDateTimeValue FKRemapExpression RemapExpression SQLExpression Value]))
+           [metabase.query_processor.interface AgFieldRef ArithmeticExpression DateTimeField DateTimeValue ExpressionRef Field RelativeDateTimeValue InternalRemapExpression RemapExpression SQLExpression Value]))
 
 (def ^:dynamic *query*
   "The outer query currently being processed."
@@ -64,6 +64,10 @@
     (apply (partial hsql/call operator)
            (map formatted args)))
 
+  SQLExpression
+  (formatted [{:keys [expr]}]
+    (hsql/raw expr))
+
   ExpressionRef
   (formatted [{:keys [expression-name]}]
     ;; Unfortunately you can't just refer to the expression by name in other clauses like filter, but have to use the original formuala.
@@ -76,22 +80,6 @@
         (isa? special-type :type/UNIXTimestampSeconds)      (sql/unix-timestamp->timestamp (driver) field :seconds)
         (isa? special-type :type/UNIXTimestampMilliseconds) (sql/unix-timestamp->timestamp (driver) field :milliseconds)
         :else                                               field)))
-
-  SQLExpression
-  (formatted [{:keys [expr]}]
-    (hsql/raw expr))
-
-  RemapExpression
-  (formatted [{:keys [column mapping]}]
-    (apply hsql/call :case
-           (mapcat (fn [[from-val to-val]]
-                     [[:= (formatted column) from-val]
-                      to-val])
-                   mapping)))
-
-  FKRemapExpression
-  (formatted [{:keys [column foreign-column remapping-column]}]
-    (formatted remapping-column))
 
   DateTimeField
   (formatted [{unit :unit, field :field}]
