@@ -8,6 +8,7 @@
             [metabase.api.common :as api]
             [metabase.models
              [field :refer [Field]]
+             [field-values :as fv]
              [interface :as mi]
              [table :as table :refer [Table]]]
             [metabase.util.schema :as su]
@@ -76,23 +77,14 @@
         (sync-database/sync-table! updated-table))
       updated-table)))
 
-(defn- values->maybe-pairs
-  "Converts a seq of `VALUES` and `HUMAN-READABLE-VALUES` to a seq of
-  lists of size 1 (if `HUMAN-READABLE-VALUES` is empty) or pairs"
-  [values human-readable-values]
-  (if (seq human-readable-values)
-    (map vector values human-readable-values)
-    (map vector values)))
-
-(defn- values->response
-  "Replaces values in `FIELD` with a seq of pairs"
-  [{{:keys [values human_readable_values]} :values, :as field}]
-  (if (seq values)
-    (assoc field :values (values->maybe-pairs values human_readable_values))
-    field))
-
 (defn- format-fields-for-response [resp]
-  (update resp :fields #(map values->response %)))
+  (update resp :fields
+          (fn [fields]
+            (map (fn [{:keys [values] :as field}]
+                   (if (seq values)
+                     (update field :values fv/field-values->pairs)
+                     field))
+                 fields))))
 
 (api/defendpoint GET "/:id/query_metadata"
   "Get metadata about a `Table` useful for running queries.
