@@ -395,7 +395,7 @@
 (s/defn ^:ql ^:always-validate expressions
   "Top-level clause. Add additional calculated fields to a query."
   {:added "0.17.0"}
-  [query, m :- {s/Keyword i/AnyExpression}]
+  [query, m :- {s/Keyword ArithmeticExpression}]
   (assoc query :expressions m))
 
 (s/defn ^:private ^:always-validate expression-fn :- ArithmeticExpression
@@ -409,11 +409,6 @@
 (def ^:ql ^{:arglists '([rvalue1 rvalue2 & more]), :added "0.17.0"} - "Arithmetic subtraction function."    (partial expression-fn :-))
 (def ^:ql ^{:arglists '([rvalue1 rvalue2 & more]), :added "0.17.0"} * "Arithmetic multiplication function." (partial expression-fn :*))
 (def ^:ql ^{:arglists '([rvalue1 rvalue2 & more]), :added "0.17.0"} / "Arithmetic division function."       (partial expression-fn :/))
-
-(s/defn ^:ql sql-expression
-  "Expression representing arbitrary SQL."
-  [sql-expr :- su/NonBlankString]
-  (i/map->SQLExpression {:expr sql-expr}))
 
 ;;; Metric & Segment handlers
 

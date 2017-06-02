@@ -94,15 +94,3 @@
             (ql/expressions {:x (ql/* $price 2.0)})
             (ql/aggregation (ql/count))
             (ql/breakout (ql/expression :x))))))
-
-(datasets/expect-with-engines (engines-that-support :expressions)
-  [[1 "Red Medicine"                 4  10.0646 -165.374 3 "[Red Medicine]"]
-   [2 "Stout Burgers & Beers"        11 34.0996 -118.329 2 "[Stout Burgers & Beers]"]
-   [3 "The Apple Pan"                11 34.0406 -118.428 2 "[The Apple Pan]"]
-   [4 "Wurstküche"                   29 33.9997 -118.465 2 "[Wurstküche]"]
-   [5 "Brite Spot Family Restaurant" 20 34.0778 -118.261 2 "[Brite Spot Family Restaurant]"]]
-  (format-rows-by [int str int (partial u/round-to-decimals 4) (partial u/round-to-decimals 4) int str]
-    (rows (data/run-query venues
-            (ql/expressions {:name-with-quotes (ql/sql-expression "'[' || name || ']'")})
-            (ql/limit 5)
-            (ql/order-by (ql/asc $id))))))

@@ -64,10 +64,6 @@
     (apply (partial hsql/call operator)
            (map formatted args)))
 
-  SQLExpression
-  (formatted [{:keys [expr]}]
-    (hsql/raw expr))
-
   ExpressionRef
   (formatted [{:keys [expression-name]}]
     ;; Unfortunately you can't just refer to the expression by name in other clauses like filter, but have to use the original formuala.
