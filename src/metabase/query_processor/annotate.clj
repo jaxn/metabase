@@ -14,7 +14,7 @@
              [interface :as i]
              [sort :as sort]]
             [toucan.db :as db])
-  (:import [metabase.query_processor.interface ArithmeticExpression ExpressionRef]))
+  (:import [metabase.query_processor.interface Expression ExpressionRef]))
 
 ;;; ## Field Resolution
 
@@ -78,12 +78,12 @@
     ;; if a custom name was provided use it
     custom-name               (driver/format-custom-field-name i/*driver* custom-name)
     ;; for unnamed expressions, just compute a name like "sum + count"
-    (instance? ArithmeticExpression ag) (let [{:keys [operator args]} ag]
-                                          (str/join (str " " (name operator) " ")
-                                                    (for [arg args]
-                                                      (if (instance? ArithmeticExpression arg)
-                                                        (str "(" (aggregation-name arg) ")")
-                                                        (aggregation-name arg)))))
+    (instance? Expression ag) (let [{:keys [operator args]} ag]
+                                (str/join (str " " (name operator) " ")
+                                          (for [arg args]
+                                            (if (instance? Expression arg)
+                                              (str "(" (aggregation-name arg) ")")
+                                              (aggregation-name arg)))))
     ;; for unnamed normal aggregations, the column alias is always the same as the ag type except for `:distinct` with is called `:count` (WHY?)
     aggregation-type          (if (= (keyword aggregation-type) :distinct)
                                 "count"
@@ -110,8 +110,8 @@
          (when (contains? #{:count :distinct} ag-type)
            {:base-type    :type/Integer
             :special-type :type/Number})
-         ;; For the time being every ArithmeticExpression is an arithmetic operator and returns a floating-point number, so hardcoding these types is fine;
-         ;; In the future when we extend ArithmeticExpressions to handle more functionality we'll want to introduce logic that associates a return type with a given expression.
+         ;; For the time being every Expression is an arithmetic operator and returns a floating-point number, so hardcoding these types is fine;
+         ;; In the future when we extend Expressions to handle more functionality we'll want to introduce logic that associates a return type with a given expression.
          ;; But this will work for the purposes of a patch release.
          (when (instance? ExpressionRef ag-field)
            {:base-type    :type/Float
@@ -130,7 +130,7 @@
   (if (has-aggregation? query)
     fields
     (concat fields (for [ag aggregations]
-                     (if (instance? ArithmeticExpression ag)
+                     (if (instance? Expression ag)
                        (expression-aggregate-field-info ag)
                        (aggregate-field-info ag))))))
 

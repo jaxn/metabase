@@ -17,7 +17,7 @@
             [metabase.util.honeysql-extensions :as hx])
   (:import clojure.lang.Keyword
            java.sql.SQLException
-           [metabase.query_processor.interface AgFieldRef ArithmeticExpression DateTimeField DateTimeValue ExpressionRef Field RelativeDateTimeValue InternalRemapExpression RemapExpression SQLExpression Value]))
+           [metabase.query_processor.interface AgFieldRef DateTimeField DateTimeValue Expression ExpressionRef Field RelativeDateTimeValue Value]))
 
 (def ^:dynamic *query*
   "The outer query currently being processed."
@@ -42,7 +42,7 @@
 
 ;; TODO - Consider moving this into query processor interface and making it a method on `ExpressionRef` instead ?
 (defn- expression-with-name
-  "Return the `ArithmeticExpression` referenced by a given (keyword or string) EXPRESSION-NAME."
+  "Return the `Expression` referenced by a given (keyword or string) EXPRESSION-NAME."
   [expression-name]
   (or (get-in *query* [:query :expressions (keyword expression-name)]) (:expressions (:query *query*))
       (throw (Exception. (format "No expression named '%s'." (name expression-name))))))
@@ -59,7 +59,7 @@
   Keyword                (formatted [this] this) ; HoneySQL fn calls and keywords (e.g. `:%count.*`) are
   honeysql.types.SqlCall (formatted [this] this) ; already converted to HoneySQL so just return them as-is
 
-  ArithmeticExpression
+  Expression
   (formatted [{:keys [operator args]}]
     (apply (partial hsql/call operator)
            (map formatted args)))
@@ -151,7 +151,7 @@
   "Apply a `aggregation` clauses to HONEYSQL-FORM. Default implementation of `apply-aggregation` for SQL drivers."
   [driver honeysql-form {aggregations :aggregation}]
   (loop [form honeysql-form, [ag & more] aggregations]
-    (let [form (if (instance? ArithmeticExpression ag)
+    (let [form (if (instance? Expression ag)
                  (apply-expression-aggregation driver form ag)
                  (apply-single-aggregation driver form ag))]
       (if-not (seq more)
