@@ -211,7 +211,7 @@
 (s/defrecord SQLExpression [expr :- su/NonBlankString])
 
 (s/defrecord RemapExpression [column :- FieldPlaceholderOrExpressionRef
-                              mapping :- {(s/cond-pre s/Str s/Num) s/Str}])
+                              mapping :- {s/Int s/Str}])
 
 (s/defrecord FKRemapExpression [column :- FieldPlaceholderOrExpressionRef
                                 foreign-column :- FieldPlaceholderOrExpressionRef

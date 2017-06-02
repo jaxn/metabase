@@ -119,40 +119,10 @@
   (format-rows-by [int str int (partial u/round-to-decimals 4) (partial u/round-to-decimals 4) int str]
     (rows+column-names
       (data/run-query venues
-        (ql/expressions {:remapped-val (ql/remap-expression $category_id [{:id 4  :value "Foo"}
-                                                                          {:id 11 :value "Bar"}
-                                                                          {:id 29 :value "Baz"}
-                                                                          {:id 20 :value "Qux"}])})
-        (ql/limit 5)
-        (ql/order-by (ql/asc $id))))))
-
-(datasets/expect-with-engines (engines-that-support :expressions)
-  {:columns ["ID" "NAME" "CATEGORY_ID" "LATITUDE" "LONGITUDE" "PRICE" "remapped-val"]
-   :rows [[1 "Red Medicine"                 4  10.0646 -165.374 3 "here"]
-          [2 "Stout Burgers & Beers"        11 34.0996 -118.329 2 "there"]
-          [3 "The Apple Pan"                11 34.0406 -118.428 2 nil]
-          [4 "Wurstküche"                   29 33.9997 -118.465 2 nil]
-          [5 "Brite Spot Family Restaurant" 20 34.0778 -118.261 2 nil]]}
-  (format-rows-by [int str int (partial u/round-to-decimals 4) (partial u/round-to-decimals 4) int str]
-    (rows+column-names
-      (data/run-query venues
-        (ql/expressions {:remapped-val (ql/remap-expression $latitude [{:id 10.0646 :value "here"}
-                                                                       {:id 34.0996 :value "there"}])})
-        (ql/limit 5)
-        (ql/order-by (ql/asc $id))))))
-
-(datasets/expect-with-engines (engines-that-support :expressions)
-  {:columns ["ID" "NAME" "CATEGORY_ID" "LATITUDE" "LONGITUDE" "PRICE" "remapped-val"]
-   :rows [[1 "Red Medicine"                 4  10.0646 -165.374 3 "Blue Medicine"]
-          [2 "Stout Burgers & Beers"        11 34.0996 -118.329 2 "Porter Burgers & Beers"]
-          [3 "The Apple Pan"                11 34.0406 -118.428 2 nil]
-          [4 "Wurstküche"                   29 33.9997 -118.465 2 nil]
-          [5 "Brite Spot Family Restaurant" 20 34.0778 -118.261 2 nil]]}
-  (format-rows-by [int str int (partial u/round-to-decimals 4) (partial u/round-to-decimals 4) int str]
-    (rows+column-names
-      (data/run-query venues
-        (ql/expressions {:remapped-val (ql/remap-expression $name [{:id "Red Medicine"          :value "Blue Medicine"}
-                                                                   {:id "Stout Burgers & Beers" :value "Porter Burgers & Beers"}])})
+        (ql/expressions {:remapped-val (ql/remap-expression $category_id {"4" "Foo"
+                                                                          "11" "Bar"
+                                                                          "29" "Baz"
+                                                                          "20" "Qux"})})
         (ql/limit 5)
         (ql/order-by (ql/asc $id))))))
 
