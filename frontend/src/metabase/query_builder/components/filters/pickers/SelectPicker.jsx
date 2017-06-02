@@ -11,6 +11,8 @@ import { createMultiwordSearchRegex } from "metabase/lib/string";
 
 import cx from "classnames";
 
+import type { Value } from "metabase/meta/types/Dataset";
+
 type SelectOption = {
     name: string,
     key: string
@@ -18,7 +20,7 @@ type SelectOption = {
 
 type Props = {
     options: Array<SelectOption>,
-    values: Array<string>,
+    values: Value[],
     onValuesChange: (values: any) => void,
     placeholder?: string,
     multi?: bool
@@ -91,10 +93,7 @@ export default class SelectPicker extends Component<*, Props, State> {
     render() {
         let { values, options, placeholder, multi } = this.props;
 
-        let checked = {};
-        for (let value of values) {
-            checked[value] = true;
-        }
+        let checked = new Set();
 
         let validOptions = [];
         let regex = this.state.searchRegex;
@@ -130,8 +129,8 @@ export default class SelectPicker extends Component<*, Props, State> {
                        <ul>
                            {validOptions.map((option, index) =>
                                <li key={index}>
-                                   <label className="flex align-center cursor-pointer p1" onClick={() => this.selectValue(option.key, !checked[option.key])}>
-                                       <CheckBox checked={checked[option.key]} />
+                                   <label className="flex align-center cursor-pointer p1" onClick={() => this.selectValue(option.key, !checked.has(option.key))}>
+                                       <CheckBox checked={checked.has(option.key)} />
                                        <h4 className="ml1">{this.nameForOption(option)}</h4>
                                    </label>
                                </li>
