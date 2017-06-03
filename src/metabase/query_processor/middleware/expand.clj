@@ -12,7 +12,7 @@
             [metabase.util :as u]
             [metabase.util.schema :as su]
             [schema.core :as s])
-  (:import [metabase.query_processor.interface AgFieldRef ArithmeticExpression BetweenFilter ComparisonFilter CompoundFilter ExpressionRef FieldPlaceholder RelativeDatetime StringFilter ValuePlaceholder]))
+  (:import [metabase.query_processor.interface AgFieldRef BetweenFilter ComparisonFilter CompoundFilter Expression ExpressionRef FieldPlaceholder RelativeDatetime StringFilter ValuePlaceholder]))
 
 ;;; # ------------------------------------------------------------ Token dispatch ------------------------------------------------------------
 
@@ -111,14 +111,14 @@
 ;;; ## aggregation
 
 (defn- field-or-expression [f]
-  (if (instance? ArithmeticExpression f)
+  (if (instance? Expression f)
     ;; recursively call field-or-expression on all the args inside the expression unless they're numbers
     ;; plain numbers are always assumed to be numeric literals here; you must use MBQL '98 `:field-id` syntax to refer to Fields inside an expression <3
     (update f :args #(for [arg %]
                        (if (number? arg)
                          arg
                          (field-or-expression arg))))
-    ;; otherwise if it's not an ArithmeticExpression it's a Field
+    ;; otherwise if it's not an Expression it's a Field
     (field f)))
 
 (s/defn ^:private ^:always-validate ag-with-field :- i/Aggregation [ag-type f]
@@ -171,7 +171,7 @@
      :else              (assoc query :aggregation (vec (for [ag ag-or-ags]
                                                          ;; make sure the ag map is still typed correctly
                                                          (u/prog1 (cond
-                                                                    (:operator ag) (i/map->ArithmeticExpression ag)
+                                                                    (:operator ag) (i/map->Expression ag)
                                                                     (:field ag)    (i/map->AggregationWithField    (update ag :aggregation-type normalize-token))
                                                                     :else          (i/map->AggregationWithoutField (update ag :aggregation-type normalize-token)))
                                                            (s/validate i/Aggregation <>)))))))
@@ -395,46 +395,20 @@
 (s/defn ^:ql ^:always-validate expressions
   "Top-level clause. Add additional calculated fields to a query."
   {:added "0.17.0"}
-  [query, m :- {s/Keyword i/AnyExpression}]
+  [query, m :- {s/Keyword Expression}]
   (assoc query :expressions m))
 
-(s/defn ^:private ^:always-validate expression-fn :- ArithmeticExpression
+(s/defn ^:private ^:always-validate expression-fn :- Expression
   [k :- s/Keyword, & args]
-  (i/map->ArithmeticExpression {:operator k, :args (vec (for [arg args]
-                                                          (if (number? arg)
-                                                            (float arg) ; convert args to floats so things like 5 / 10 -> 0.5 instead of 0
-                                                            arg)))}))
+  (i/map->Expression {:operator k, :args (vec (for [arg args]
+                                                (if (number? arg)
+                                                  (float arg) ; convert args to floats so things like 5 / 10 -> 0.5 instead of 0
+                                                  arg)))}))
 
 (def ^:ql ^{:arglists '([rvalue1 rvalue2 & more]), :added "0.17.0"} + "Arithmetic addition function."       (partial expression-fn :+))
 (def ^:ql ^{:arglists '([rvalue1 rvalue2 & more]), :added "0.17.0"} - "Arithmetic subtraction function."    (partial expression-fn :-))
 (def ^:ql ^{:arglists '([rvalue1 rvalue2 & more]), :added "0.17.0"} * "Arithmetic multiplication function." (partial expression-fn :*))
 (def ^:ql ^{:arglists '([rvalue1 rvalue2 & more]), :added "0.17.0"} / "Arithmetic division function."       (partial expression-fn :/))
-
-(s/defn ^:ql sql-expression
-  "Expression representing arbitrary SQL."
-  [sql-expr :- su/NonBlankString]
-  (i/map->SQLExpression {:expr sql-expr}))
-
-(s/defn ^:ql remap-expression
-  "Expression that projects out alternate representations of values in
-  `COLUMN`. `COLUMN` values are the keys in `MAPPING`, with the value
-  found in `MAPPING` as the result of the expression."
-  [column :- i/FieldPlaceholderOrExpressionRef
-   mapping :- [{:id (s/cond-pre s/Str s/Num)
-                :value s/Str}]]
-  (i/map->RemapExpression {:column column
-                           :mapping (zipmap (map :id mapping)
-                                            (map :value mapping))}))
-
-(s/defn ^:ql fk-remap-expression
-  "Expression that uses `COLUMN` and `FOREIGN-COLUMN` to project out a
-  more user friendly value found in `REMAPPING-COLUMN`."
-  [column :- i/FieldPlaceholderOrExpressionRef
-   foreign-column :- i/FieldPlaceholderOrExpressionRef
-   remapping-column :- i/FieldPlaceholderOrExpressionRef]
-  (i/map->FKRemapExpression {:column column
-                             :foreign-column foreign-column
-                             :remapping-column remapping-column}))
 
 ;;; Metric & Segment handlers
 

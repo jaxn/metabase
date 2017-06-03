@@ -157,8 +157,8 @@
                                                 :fk_target_field_id $
                                                 :raw_column_id      $
                                                 :last_analyzed      $
-                                                :dimensions         ()
-                                                :values             ()}))
+                                                :dimensions         []
+                                                :values             []}))
                              (merge defaults (match-$ (Field (id :categories :name))
                                                {:special_type       "type/Name"
                                                 :name               "NAME"
@@ -172,7 +172,7 @@
                                                 :raw_column_id      $
                                                 :last_analyzed      $
                                                 :values             venue-categories
-                                                :dimensions         ()}))])
+                                                :dimensions         []}))])
             :rows         75
             :updated_at   $
             :id           (id :categories)
@@ -498,7 +498,7 @@
         (select-keys [:id :table_id :name :values :dimensions])
         (update :dimensions (fn [dim]
                               (if (map? dim)
-                                (dissoc dim :id)
+                                (dissoc dim :id :created_at :updated_at)
                                 dim))))))
 
 ;; ## GET /api/table/:id/query_metadata
@@ -518,7 +518,7 @@
     (fn []
       [(db/insert! Dimensions {:field_id (id :venues :category_id)
                                :name "Foo"
-                               :type "internal"})
+                               :type :internal})
        (db/insert! FieldValues {:field_id (id :venues :category_id)
                                 :values (json/generate-string (range 0 (count venue-categories)))
                                 :human_readable_values (json/generate-string (map first venue-categories))})])
@@ -542,7 +542,7 @@
     (fn []
       [(db/insert! Dimensions {:field_id (id :venues :category_id)
                                :name "Foo"
-                               :type "external"
+                               :type :external
                                :human_readable_field_id (id :categories :name)})])
     (narrow-fields ["PRICE" "CATEGORY_ID"]
                    ((user->client :rasta) :get 200 (format "table/%d/query_metadata" (id :venues))))))

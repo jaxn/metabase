@@ -9,7 +9,7 @@
              [annotate :as annotate]
              [interface :as i]]
             [metabase.util :as u])
-  (:import [metabase.query_processor.interface AgFieldRef ArithmeticExpression DateTimeField DateTimeValue Field RelativeDateTimeValue Value]))
+  (:import [metabase.query_processor.interface AgFieldRef DateTimeField DateTimeValue Expression Field RelativeDateTimeValue Value]))
 
 (def ^:private ^:const topN-max-results
   "Maximum number of rows the topN query in Druid should return. Huge values cause significant issues with the engine.
@@ -110,10 +110,10 @@
   {:post [(every? u/string-or-keyword? %)]}
   (flatten (for [arg   args
                  :when (or (field? arg)
-                           (instance? ArithmeticExpression arg))]
+                           (instance? Expression arg))]
              (cond
-               (instance? ArithmeticExpression arg) (expression->field-names arg)
-               (field? arg)                         (->rvalue arg)))))
+               (instance? Expression arg) (expression->field-names arg)
+               (field? arg)               (->rvalue arg)))))
 
 (defn- expression-arg->js [arg default-value]
   (if-not (field? arg)
@@ -143,7 +143,7 @@
                     (js/return (js/+ :x :y)))}))
 
 (defn- ag:doubleSum [field output-name]
-  (if (instance? ArithmeticExpression field)
+  (if (instance? Expression field)
     (ag:doubleSum:expression field output-name)
     ;; metrics can use the built-in :doubleSum aggregator, but for dimensions we have to roll something that does the same thing in JS
     (case (dimension-or-metric? field)
@@ -170,7 +170,7 @@
                     (js/return (js/fn-call :Math.min :x :y)))}))
 
 (defn- ag:doubleMin [field output-name]
-  (if (instance? ArithmeticExpression field)
+  (if (instance? Expression field)
     (ag:doubleMin:expression field output-name)
     (case (dimension-or-metric? field)
       :metric    {:type      :doubleMin
@@ -196,7 +196,7 @@
                     (js/return (js/fn-call :Math.max :x :y)))}))
 
 (defn- ag:doubleMax [field output-name]
-  (if (instance? ArithmeticExpression field)
+  (if (instance? Expression field)
     (ag:doubleMax:expression field output-name)
     (case (dimension-or-metric? field)
       :metric    {:type      :doubleMax
@@ -253,7 +253,7 @@
       (number? arg)              arg
       (:aggregation-type arg)    (assoc arg :output-name (or (:output-name arg)
                                                              (name (gensym (str "___" (name (:aggregation-type arg)) "_")))))
-      (instance? ArithmeticExpression arg) (update arg :args add-expression-aggregation-output-names))))
+      (instance? Expression arg) (update arg :args add-expression-aggregation-output-names))))
 
 (defn- expression-post-aggregation [{:keys [operator args], :as expression}]
   {:type   :arithmetic
@@ -263,7 +263,7 @@
              (cond
                (number? arg)              {:type :constant, :name (str arg), :value arg}
                (:output-name arg)         {:type :fieldAccess, :fieldName (:output-name arg)}
-               (instance? ArithmeticExpression arg) (expression-post-aggregation arg)))})
+               (instance? Expression arg) (expression-post-aggregation arg)))})
 
 (declare handle-aggregations)
 
@@ -272,7 +272,7 @@
   [expression]
   (apply concat (for [arg   (:args expression)
                       :when (not (number? arg))]
-                  (if (instance? ArithmeticExpression arg)
+                  (if (instance? Expression arg)
                     (expression->actual-ags arg)
                     [arg]))))
 
@@ -287,7 +287,7 @@
 
 (defn- handle-aggregations [query-type {aggregations :aggregation} druid-query]
   (loop [[ag & more] aggregations, query druid-query]
-    (if (instance? ArithmeticExpression ag)
+    (if (instance? Expression ag)
       (handle-expression-aggregation query-type ag druid-query)
       (let [query (handle-aggregation query-type ag query)]
         (if-not (seq more)
@@ -427,7 +427,7 @@
    :value     value})
 
 (defn- filter:nil? [field]
-  (if (instance? ArithmeticExpression field)
+  (if (instance? Expression field)
     (filter:and (for [arg   (:args field)
                       :when (field? arg)]
                   (filter:nil? arg)))
