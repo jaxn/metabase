@@ -21,8 +21,9 @@
                                 [:id :desc]]})
                   (hydrate :values)
                   (hydrate :dimensions))]
-    (let [field (resolve/resolve-table (i/map->Field (resolve/rename-mb-field-keys field))
-                                       {[nil source-table-id] source-table})]
+    (let [field (-> field
+                    resolve/convert-db-field
+                    (resolve/resolve-table {[nil source-table-id] source-table}))]
       (if (qputil/datetime-field? field)
         (i/map->DateTimeField {:field field, :unit :default})
         field))))

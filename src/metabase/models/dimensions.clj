@@ -2,7 +2,7 @@
   (:require [toucan.models :as models]
             [metabase.util :as u]))
 
-(def dimention-types
+(def dimension-types
   "Possible values for `Dimensions.type`"
   #{:internal
     :external})
