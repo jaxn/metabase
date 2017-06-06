@@ -19,12 +19,14 @@
              [driver-specific :as driver-specific]
              [expand-macros :as expand-macros]
              [expand-resolve :as expand-resolve]
+             [fetch-source-query :as fetch-source-query]
              [format-rows :as format-rows]
              [limit :as limit]
              [log :as log-query]
              [mbql-to-native :as mbql-to-native]
              [parameters :as parameters]
              [permissions :as perms]
+             [results-metadata :as results-metadata]
              [resolve-driver :as resolve-driver]]
             [metabase.query-processor.util :as qputil]
             [metabase.util.schema :as su]
@@ -76,7 +78,7 @@
   ;; ▼▼▼ POST-PROCESSING ▼▼▼  happens from TOP-TO-BOTTOM, e.g. the results of `f` are (eventually) passed to `limit`
   (-> f
       dev/guard-multiple-calls
-      mbql-to-native/mbql->native                      ; ▲▲▲ NATIVE-ONLY POINT ▲▲▲ Query converted from MBQL to native here; all functions *above* will only see the native query
+      mbql-to-native/mbql->native                   ; ▲▲▲ NATIVE-ONLY POINT ▲▲▲ Query converted from MBQL to native here; all functions *above* will only see the native query
       annotate-and-sort/annotate-and-sort
       perms/check-query-permissions
       log-query/log-expanded-query
@@ -85,13 +87,15 @@
       cumulative-ags/handle-cumulative-aggregations
       implicit-clauses/add-implicit-clauses
       format-rows/format-rows
-      expand-resolve/expand-resolve                    ; ▲▲▲ QUERY EXPANSION POINT  ▲▲▲ All functions *above* will see EXPANDED query during PRE-PROCESSING
-      row-count-and-status/add-row-count-and-status    ; ▼▼▼ RESULTS WRAPPING POINT ▼▼▼ All functions *below* will see results WRAPPED in `:data` during POST-PROCESSING
+      results-metadata/record-and-return-metadata!
+      expand-resolve/expand-resolve                 ; ▲▲▲ QUERY EXPANSION POINT  ▲▲▲ All functions *above* will see EXPANDED query during PRE-PROCESSING
+      row-count-and-status/add-row-count-and-status ; ▼▼▼ RESULTS WRAPPING POINT ▼▼▼ All functions *below* will see results WRAPPED in `:data` during POST-PROCESSING
       parameters/substitute-parameters
       expand-macros/expand-macros
-      driver-specific/process-query-in-context         ; (drivers can inject custom middleware if they implement IDriver's `process-query-in-context`)
+      driver-specific/process-query-in-context      ; (drivers can inject custom middleware if they implement IDriver's `process-query-in-context`)
       add-settings/add-settings
-      resolve-driver/resolve-driver                    ; ▲▲▲ DRIVER RESOLUTION POINT ▲▲▲ All functions *above* will have access to the driver during PRE- *and* POST-PROCESSING
+      resolve-driver/resolve-driver                 ; ▲▲▲ DRIVER RESOLUTION POINT ▲▲▲ All functions *above* will have access to the driver during PRE- *and* POST-PROCESSING
+      fetch-source-query/fetch-source-query
       log-query/log-initial-query
       cache/maybe-return-cached-results
       catch-exceptions/catch-exceptions))
@@ -110,21 +114,27 @@
   [query]
   ((qp-pipeline execute-query) query))
 
-
-
 (def ^{:arglists '([query])} expand
   "Expand a QUERY the same way it would normally be done as part of query processing.
    This is useful for things that need to look at an expanded query, such as permissions checking for Cards."
   (->> identity
        expand-resolve/expand-resolve
        parameters/substitute-parameters
-       expand-macros/expand-macros))
+       expand-macros/expand-macros
+       fetch-source-query/fetch-source-query))
 ;; ▲▲▲ This only does PRE-PROCESSING, so it happens from bottom to top, eventually returning the preprocessed query instead of running it
 
 
 ;;; +----------------------------------------------------------------------------------------------------+
 ;;; |                                     DATASET-QUERY PUBLIC API                                       |
 ;;; +----------------------------------------------------------------------------------------------------+
+
+;; The only difference between `process-query` and `process-query-and-save-execution!` (below) is that the
+;; latter records a `QueryExecution` (inserts a new row) recording some stats about this Query run including
+;; execution time and type of query ran
+;;
+;; `process-query-and-save-execution!` is the function used by various things like API endpoints and pulses;
+;; `process-query` is more of an internal function
 
 (defn- save-query-execution!
   "Save a `QueryExecution` and update the average execution time for the corresponding `Query`."
@@ -227,7 +237,7 @@
                        *allow-queries-with-no-executor-id*))
                  "executed-by cannot be nil unless *allow-queries-with-no-executor-id* is true"))
 
-(s/defn ^:always-validate dataset-query
+(s/defn ^:always-validate process-query-and-save-execution!
   "Process and run a json based dataset query and return results.
 
   Takes 2 arguments:

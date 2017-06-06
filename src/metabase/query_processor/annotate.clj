@@ -1,7 +1,5 @@
 (ns metabase.query-processor.annotate
   "Code that analyzes the results of running a query and adds relevant type information about results (including foreign key information)."
-  ;; TODO - The code in this namespace could definitely use a little cleanup to make it a little easier to wrap one's head around :)
-  ;; TODO - This namespace should be called something like `metabase.query-processor.middleware.annotate`
   (:require [clojure
              [set :as set]
              [string :as str]]
@@ -10,7 +8,9 @@
             [metabase
              [driver :as driver]
              [util :as u]]
-            [metabase.models.field :refer [Field]]
+            [metabase.models
+             [field :refer [Field]]
+             [humanization :as humanization]]
             [metabase.query-processor
              [interface :as i]
              [sort :as sort]]
@@ -145,7 +145,7 @@
    :preview-display    true
    :special-type       nil
    :field-name         k
-   :field-display-name k})
+   :field-display-name (humanization/name->human-readable-name (name k))})
 
 
 (defn- info-for-duplicate-field
